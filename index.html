@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KiraManga – Multi-Source Manga Reader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+  <div class="container mx-auto px-4 py-6">
+    <h1 class="text-3xl font-bold mb-6 text-center text-purple-400">📚 KiraManga</h1>
+
+    <!-- Search bar -->
+    <div class="flex justify-center mb-6">
+      <input id="searchInput" type="text" placeholder="Search manga..."
+        class="w-full max-w-lg px-4 py-2 rounded-l-lg text-black focus:outline-none">
+      <button id="searchBtn"
+        class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-r-lg">Search</button>
+    </div>
+
+    <!-- Search results -->
+    <div id="results" class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+
+    <!-- Chapter list -->
+    <div id="chapters" class="mt-8"></div>
+
+    <!-- Reader -->
+    <div id="reader" class="mt-8 flex flex-col items-center space-y-4"></div>
+  </div>
+
+  <script>
+    const API_BASE = "https://kira-manga-plum.vercel.app"; // your Consumet API URL
+
+    const sources = [
+      "mangadex",
+      "manganato",
+      "mangasee123",
+      "mangakakalot",
+      "comick",
+      "mangapill",
+      "asura",
+      "toonily",
+      "flamecomics"
+    ];
+
+    const searchBtn = document.getElementById("searchBtn");
+    const searchInput = document.getElementById("searchInput");
+    const results = document.getElementById("results");
+    const chapters = document.getElementById("chapters");
+    const reader = document.getElementById("reader");
+
+    async function searchManga(query) {
+      results.innerHTML = `<p class='text-center text-gray-400'>Searching across all sources...</p>`;
+      chapters.innerHTML = "";
+      reader.innerHTML = "";
+
+      let allResults = [];
+
+      await Promise.all(sources.map(async (src) => {
+        try {
+          const res = await fetch(`${API_BASE}/manga/${src}/${encodeURIComponent(query)}`);
+          const data = await res.json();
+          if (Array.isArray(data.results)) {
+            data.results.forEach(item => allResults.push({ ...item, source: src }));
+          }
+        } catch (err) {
+          console.warn(`${src} failed:`, err);
+        }
+      }));
+
+      if (allResults.length === 0) {
+        results.innerHTML = `<p class='text-center text-red-400'>No results found 😢</p>`;
+        return;
+      }
+
+      results.innerHTML = allResults.map(manga => `
+        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition cursor-pointer"
+             onclick="loadChapters('${manga.source}', '${manga.id || manga.mangaId}', '${manga.title.replace(/'/g, "\\'")}')">
+          <img src="${manga.image || ''}" alt="${manga.title}" class="w-full h-72 object-cover">
+          <div class="p-3">
+            <h3 class="text-lg font-semibold truncate">${manga.title}</h3>
+            <p class="text-sm text-gray-400">${manga.source.toUpperCase()}</p>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function loadChapters(source, mangaId, title) {
+      results.innerHTML = "";
+      chapters.innerHTML = `<p class='text-center text-gray-400'>Loading chapters from ${source}...</p>`;
+      reader.innerHTML = "";
+
+      try {
+        const res = await fetch(`${API_BASE}/manga/${source}/info/${mangaId}`);
+        const data = await res.json();
+        if (!data.chapters || data.chapters.length === 0) {
+          chapters.innerHTML = `<p class='text-center text-gray-400'>No chapters found 😢</p>`;
+          return;
+        }
+
+        chapters.innerHTML = `
+          <h2 class="text-2xl mb-4 text-center">${title}</h2>
+          <div class="flex flex-col items-center space-y-2">
+            ${data.chapters.map(ch => `
+              <button class="bg-purple-700 hover:bg-purple-800 px-4 py-2 rounded-lg w-64"
+                      onclick="readChapter('${source}', '${encodeURIComponent(ch.id)}')">
+                ${ch.title || ch.id}
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } catch (err) {
+        chapters.innerHTML = `<p class='text-center text-red-400'>Error loading chapters.</p>`;
+        console.error(err);
+      }
+    }
+
+    async function readChapter(source, chapterId) {
+      reader.innerHTML = `<p class='text-center text-gray-400'>Loading chapter...</p>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/manga/${source}/read?chapterId=${chapterId}`);
+        const data = await res.json();
+
+        if (!data || !data.images) {
+          reader.innerHTML = `<p class='text-center text-gray-400'>No images found 😢</p>`;
+          return;
+        }
+
+        reader.innerHTML = data.images.map(img => `
+          <img src="${img}" class="max-w-full rounded-lg shadow-lg">
+        `).join("");
+      } catch (err) {
+        reader.innerHTML = `<p class='text-center text-red-400'>Failed to load chapter images.</p>`;
+        console.error(err);
+      }
+    }
+
+    searchBtn.addEventListener("click", () => {
+      const query = searchInput.value.trim();
+      if (query) searchManga(query);
+    });
+
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") searchBtn.click();
+    });
+  </script>
+</body>
+</html>
