@@ -6,11 +6,7 @@
   <title>Kira Manga</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #0f0f0f;
-      color: #fff;
-    }
+    body { background-color: #0f0f0f; color: #fff; font-family: 'Inter', sans-serif; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
   </style>
 </head>
@@ -41,8 +37,9 @@
   </div>
 
   <script>
-    const API_BASE = "https://kira-manga-plum.vercel.app"; // Replace with your API
+    const API_BASE = "https://kira-manga-plum.vercel.app"; // replace with your API
     const sources = ["asura", "flamecomics", "toonily", "mangapill"];
+    const chapterSources = ["asura", "flamecomics", "toonily"]; // only these reliably provide chapters
 
     const searchInput = document.getElementById("searchInput");
     const searchBtn = document.getElementById("searchBtn");
@@ -101,11 +98,19 @@
       chapters.innerHTML = `<p class="text-center text-gray-400">Loading chapters from ${source}...</p>`;
       readerContent.innerHTML = "";
 
+      if(!chapterSources.includes(source)){
+        chapters.innerHTML = `<p class="text-center text-red-400">
+          ${source.toUpperCase()} has no chapters 😢. Try another source.
+        </p>`;
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/manga/${source}/info/${mangaId}`);
         const data = await res.json();
+
         if(!data.chapters || data.chapters.length === 0){
-          chapters.innerHTML = `<p class="text-center text-gray-400">No chapters found 😢</p>`;
+          chapters.innerHTML = `<p class="text-center text-red-400">No chapters found 😢</p>`;
           return;
         }
 
@@ -135,12 +140,7 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        let images = [];
-        if(source === "mangapill") {
-          images = data.images?.map(img => img.img) || [];
-        } else {
-          images = data.images?.map(img => img.img) || [];
-        }
+        let images = data.images?.map(img => img.img) || [];
 
         if(!images.length){
           readerContent.innerHTML = `<p class="text-center text-red-400">No images found 😢</p>`;
