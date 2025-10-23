@@ -37,9 +37,8 @@
   </div>
 
   <script>
-    const API_BASE = "https://kira-manga-plum.vercel.app"; // replace with your API
+    const API_BASE = "https://your-consumet-api.vercel.app"; // replace with your API URL
     const sources = ["asura", "flamecomics", "toonily", "mangapill"];
-    const chapterSources = ["asura", "flamecomics", "toonily"]; // only these reliably provide chapters
 
     const searchInput = document.getElementById("searchInput");
     const searchBtn = document.getElementById("searchBtn");
@@ -98,15 +97,8 @@
       chapters.innerHTML = `<p class="text-center text-gray-400">Loading chapters from ${source}...</p>`;
       readerContent.innerHTML = "";
 
-      if(!chapterSources.includes(source)){
-        chapters.innerHTML = `<p class="text-center text-red-400">
-          ${source.toUpperCase()} has no chapters 😢. Try another source.
-        </p>`;
-        return;
-      }
-
       try {
-        const res = await fetch(`${API_BASE}/manga/${source}/info/${mangaId}`);
+        const res = await fetch(`${API_BASE}/manga/${source}/info?id=${mangaId}`);
         const data = await res.json();
 
         if(!data.chapters || data.chapters.length === 0){
@@ -136,11 +128,11 @@
       readerContent.innerHTML = `<p class="text-center text-gray-400">Loading chapter...</p>`;
 
       try{
-        const url = `${API_BASE}/manga/${source}/read/${chapterId}`;
+        const url = `${API_BASE}/manga/${source}/read?chapterId=${chapterId}`;
         const res = await fetch(url);
         const data = await res.json();
 
-        let images = data.images?.map(img => img.img) || [];
+        let images = data.images || [];
 
         if(!images.length){
           readerContent.innerHTML = `<p class="text-center text-red-400">No images found 😢</p>`;
