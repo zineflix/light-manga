@@ -116,25 +116,43 @@
     }
 
     async function readChapter(source, chapterId) {
-      reader.innerHTML = `<p class='text-center text-gray-400'>Loading chapter...</p>`;
-
-      try {
-        const res = await fetch(`${API_BASE}/manga/${source}/read?chapterId=${chapterId}`);
-        const data = await res.json();
-
-        if (!data || !data.images) {
-          reader.innerHTML = `<p class='text-center text-gray-400'>No images found 😢</p>`;
-          return;
-        }
-
-        reader.innerHTML = data.images.map(img => `
-          <img src="${img}" class="max-w-full rounded-lg shadow-lg">
-        `).join("");
-      } catch (err) {
-        reader.innerHTML = `<p class='text-center text-red-400'>Failed to load chapter images.</p>`;
-        console.error(err);
-      }
+  reader.innerHTML = `<p class='text-center text-gray-400'>Loading chapter...</p>`;
+  
+  try {
+    let url = "";
+    // MangaDex expects /read/:chapterId
+    if (source === "mangadex") {
+      url = `${API_BASE}/manga/${source}/read/${chapterId}`;
+    } else {
+      // Manganato, Mangasee123, etc.
+      url = `${API_BASE}/manga/${source}/read/${chapterId}`;
     }
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // Different sources may wrap images differently
+    let images = [];
+    if (source === "mangadex") {
+      images = data.pages || [];
+    } else {
+      images = data.images?.map(img => img.img) || [];
+    }
+
+    if (!images.length) {
+      reader.innerHTML = `<p class='text-center text-red-400'>No images found 😢</p>`;
+      return;
+    }
+
+    reader.innerHTML = images.map(img => `
+      <img src="${img}" class="max-w-full rounded-lg shadow-lg mb-2">
+    `).join("");
+  } catch (err) {
+    reader.innerHTML = `<p class='text-center text-red-400'>Failed to load chapter images.</p>`;
+    console.error(err);
+  }
+}
+
 
     searchBtn.addEventListener("click", () => {
       const query = searchInput.value.trim();
