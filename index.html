@@ -1,156 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kira Manga</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background-color: #0f0f0f; color: #fff; font-family: 'Inter', sans-serif; }
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kira Manga - MangaPill Only</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f0f0f; color: #fff; font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header class="bg-gray-900 p-4 flex flex-col md:flex-row items-center justify-between shadow-md">
-    <h1 class="text-2xl md:text-3xl font-bold text-purple-400 mb-2 md:mb-0">📚 Kira Manga</h1>
-    <div class="flex gap-2 w-full md:w-auto">
-      <input id="searchInput" type="text" placeholder="Search manga..."
-        class="flex-1 px-3 py-2 rounded-l bg-gray-800 text-white focus:outline-none" />
-      <button id="searchBtn" class="bg-purple-600 px-4 py-2 rounded-r hover:bg-purple-700">Search</button>
-    </div>
-  </header>
-
-  <!-- Main content -->
-  <main class="flex-1 p-4">
-    <div id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
-    <div id="chapters" class="mt-8"></div>
-  </main>
-
-  <!-- Reader modal -->
-  <div id="readerModal" class="fixed inset-0 bg-black bg-opacity-95 overflow-y-auto hidden z-50">
-    <div class="p-4 max-w-4xl mx-auto">
-      <button onclick="closeReader()" class="bg-gray-800 px-3 py-1 rounded mb-4 hover:bg-gray-700">✕ Close</button>
-      <div id="readerContent" class="flex flex-col items-center space-y-4"></div>
-    </div>
-  </div>
-
-  <script>
-    const API_BASE = "https://kira-manga-plum.vercel.app"; // replace with your API URL
-    const sources = ["asura", "flamecomics", "toonily", "mangapill"];
-
-    const searchInput = document.getElementById("searchInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const results = document.getElementById("results");
-    const chapters = document.getElementById("chapters");
-    const readerModal = document.getElementById("readerModal");
-    const readerContent = document.getElementById("readerContent");
-
-    searchBtn.addEventListener("click", () => {
-      const query = searchInput.value.trim();
-      if(query) searchManga(query);
-    });
-
-    searchInput.addEventListener("keypress", (e) => {
-      if(e.key === "Enter") searchBtn.click();
-    });
-
-    async function searchManga(query) {
-      results.innerHTML = `<p class="col-span-full text-center text-gray-400">Searching...</p>`;
-      chapters.innerHTML = "";
-      readerContent.innerHTML = "";
-
-      let allResults = [];
-
-      await Promise.all(sources.map(async (src) => {
-        try {
-          const res = await fetch(`${API_BASE}/manga/${src}/${encodeURIComponent(query)}`);
-          const data = await res.json();
-          if (Array.isArray(data.results)) {
-            data.results.forEach(item => allResults.push({...item, source: src}));
-          }
-        } catch(err) {
-          console.warn(`${src} failed:`, err);
-        }
-      }));
-
-      if(allResults.length === 0){
-        results.innerHTML = `<p class="col-span-full text-center text-red-400">No results found 😢</p>`;
-        return;
-      }
-
-      results.innerHTML = allResults.map(manga => `
-        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition cursor-pointer"
-             onclick="loadChapters('${manga.source}','${manga.id || manga.mangaId}','${manga.title.replace(/'/g,"\\'")}')">
-          <img src="${manga.image || ''}" alt="${manga.title}" class="w-full h-72 object-cover">
-          <div class="p-2">
-            <h2 class="text-sm font-semibold line-clamp-2">${manga.title}</h2>
-            <p class="text-xs text-gray-400">${manga.source.toUpperCase()}</p>
-          </div>
+    <header class="bg-gray-900 p-4 flex flex-col md:flex-row items-center justify-between shadow-md">
+        <h1 class="text-2xl md:text-3xl font-bold text-purple-400 mb-2 md:mb-0">📚 Kira Manga (MangaPill Only)</h1>
+        <div class="flex gap-2 w-full md:w-auto">
+            <input id="searchInput" type="text" placeholder="Search manga..."
+                class="flex-1 px-3 py-2 rounded-l bg-gray-800 text-white focus:outline-none" />
+            <button id="searchBtn" class="bg-purple-600 px-4 py-2 rounded-r hover:bg-purple-700">Search</button>
         </div>
-      `).join('');
-    }
+    </header>
 
-    async function loadChapters(source, mangaId, title) {
-      results.innerHTML = "";
-      chapters.innerHTML = `<p class="text-center text-gray-400">Loading chapters from ${source}...</p>`;
-      readerContent.innerHTML = "";
+    <main class="flex-1 p-4">
+        <div id="results" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        <div id="chapters" class="mt-8"></div>
+    </main>
 
-      try {
-        const res = await fetch(`${API_BASE}/manga/${source}/info?id=${mangaId}`);
-        const data = await res.json();
+    <div id="readerModal" class="fixed inset-0 bg-black bg-opacity-95 overflow-y-auto hidden z-50">
+        <div class="p-4 max-w-4xl mx-auto">
+            <button onclick="closeReader()" class="bg-gray-800 px-3 py-1 rounded mb-4 hover:bg-gray-700">✕ Close</button>
+            <div id="readerContent" class="flex flex-col items-center space-y-4"></div>
+        </div>
+    </div>
 
-        if(!data.chapters || data.chapters.length === 0){
-          chapters.innerHTML = `<p class="text-center text-red-400">No chapters found 😢</p>`;
-          return;
+    <script>
+        const API_BASE = "https://kira-manga-plum.vercel.app";
+        // ONLY MANGA PILL
+        const sources = ["mangapill"];
+
+        const searchInput = document.getElementById("searchInput");
+        const searchBtn = document.getElementById("searchBtn");
+        const results = document.getElementById("results");
+        const chapters = document.getElementById("chapters");
+        const readerModal = document.getElementById("readerModal");
+        const readerContent = document.getElementById("readerContent");
+
+        searchBtn.addEventListener("click", () => {
+            const query = searchInput.value.trim();
+            if(query) searchManga(query);
+        });
+
+        searchInput.addEventListener("keypress", (e) => {
+            if(e.key === "Enter") searchBtn.click();
+        });
+
+        async function searchManga(query) {
+            results.innerHTML = `<p class="col-span-full text-center text-gray-400">Searching...</p>`;
+            chapters.innerHTML = "";
+            readerContent.innerHTML = "";
+
+            let allResults = [];
+            // Simplified the Promise.all since it's just one source now, but kept the structure for future flexibility
+            await Promise.all(sources.map(async (src) => {
+                try {
+                    // Note: mangapill search endpoint might return an object instead of a list of results,
+                    // but the original code assumes 'results' array is returned, which is fine for this structure.
+                    const res = await fetch(`${API_BASE}/manga/${src}/${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    
+                    // Check if 'results' is an array, otherwise assume the whole response is the single result
+                    // For mangapill, it often returns a single search result or a list.
+                    if (Array.isArray(data.results)) {
+                        data.results.forEach(item => allResults.push({...item, source: src}));
+                    } else if (data.mangaId && data.title) {
+                        // Handle case where a single result object is returned directly (though less common for a search route)
+                        allResults.push({...data, source: src});
+                    }
+                } catch(err) {
+                    // Only logging failure for the single source
+                    console.error(`${src} failed:`, err);
+                }
+            }));
+
+            if(allResults.length === 0){
+                results.innerHTML = `<p class="col-span-full text-center text-red-400">No results found 😢</p>`;
+                return;
+            }
+
+            // Using manga.id || manga.mangaId for the ID in case the API response differs
+            results.innerHTML = allResults.map(manga => `
+                <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition cursor-pointer"
+                    onclick="loadChapters('${manga.source}','${manga.id || manga.mangaId}','${manga.title.replace(/'/g,"\\'")}')">
+                    <img src="${manga.image || ''}" alt="${manga.title}" class="w-full h-72 object-cover">
+                    <div class="p-2">
+                        <h2 class="text-sm font-semibold line-clamp-2">${manga.title}</h2>
+                        <p class="text-xs text-gray-400">${manga.source.toUpperCase()}</p>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        chapters.innerHTML = `
-          <h2 class="text-2xl mb-4 text-center">${title}</h2>
-          <div class="flex flex-col items-center space-y-2">
-            ${data.chapters.map(ch => `
-              <button class="bg-purple-700 hover:bg-purple-800 px-4 py-2 rounded-lg w-64"
-                      onclick="readChapter('${source}','${encodeURIComponent(ch.id)}')">
-                ${ch.title || ch.id}
-              </button>
-            `).join('')}
-          </div>
-        `;
-      } catch(err){
-        chapters.innerHTML = `<p class="text-center text-red-400">Error loading chapters.</p>`;
-        console.error(err);
-      }
-    }
+        async function loadChapters(source, mangaId, title) {
+            results.innerHTML = "";
+            chapters.innerHTML = `<p class="text-center text-gray-400">Loading chapters from ${source}...</p>`;
+            readerContent.innerHTML = "";
 
-    async function readChapter(source, chapterId){
-      readerModal.classList.remove("hidden");
-      readerContent.innerHTML = `<p class="text-center text-gray-400">Loading chapter...</p>`;
+            try {
+                // For mangapill, the ID is often the slug, which works well with the info route.
+                const res = await fetch(`${API_BASE}/manga/${source}/info?id=${mangaId}`);
+                const data = await res.json();
 
-      try{
-        const url = `${API_BASE}/manga/${source}/read?chapterId=${chapterId}`;
-        const res = await fetch(url);
-        const data = await res.json();
+                if(!data.chapters || data.chapters.length === 0){
+                    chapters.innerHTML = `<p class="text-center text-red-400">No chapters found 😢</p>`;
+                    return;
+                }
 
-        let images = data.images || [];
+                // Reverse the chapters array so the newest/latest chapter is at the top
+                const displayChapters = data.chapters.reverse();
 
-        if(!images.length){
-          readerContent.innerHTML = `<p class="text-center text-red-400">No images found 😢</p>`;
-          return;
+                chapters.innerHTML = `
+                    <h2 class="text-2xl mb-4 text-center">${title}</h2>
+                    <div class="flex flex-col items-center space-y-2">
+                        ${displayChapters.map(ch => `
+                            <button class="bg-purple-700 hover:bg-purple-800 px-4 py-2 rounded-lg w-64 text-sm md:text-base"
+                                    onclick="readChapter('${source}','${encodeURIComponent(ch.id)}')">
+                                ${ch.title || ch.id}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            } catch(err){
+                chapters.innerHTML = `<p class="text-center text-red-400">Error loading chapters.</p>`;
+                console.error(err);
+            }
         }
 
-        readerContent.innerHTML = images.map(img => `
-          <img src="${img}" class="max-w-full rounded-lg shadow-lg mb-2">
-        `).join('');
-      }catch(err){
-        readerContent.innerHTML = `<p class="text-center text-red-400">Failed to load chapter images.</p>`;
-        console.error(err);
-      }
-    }
+        async function readChapter(source, chapterId){
+            readerModal.classList.remove("hidden");
+            readerContent.innerHTML = `<p class="text-center text-gray-400">Loading chapter...</p>`;
 
-    function closeReader(){
-      readerModal.classList.add("hidden");
-    }
-  </script>
+            try{
+                const url = `${API_BASE}/manga/${source}/read?chapterId=${chapterId}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                let images = data.images || [];
+
+                if(!images.length){
+                    readerContent.innerHTML = `<p class="text-center text-red-400">No images found 😢</p>`;
+                    return;
+                }
+
+                readerContent.innerHTML = images.map(img => `
+                    <img src="${img}" class="max-w-full rounded-lg shadow-lg mb-2">
+                `).join('');
+            }catch(err){
+                readerContent.innerHTML = `<p class="text-center text-red-400">Failed to load chapter images.</p>`;
+                console.error(err);
+            }
+        }
+
+        function closeReader(){
+            readerModal.classList.add("hidden");
+        }
+    </script>
 </body>
 </html>
