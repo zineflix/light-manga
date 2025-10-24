@@ -15,6 +15,11 @@
             transform: scale(1.03);
             transition: transform 0.2s ease-in-out;
         }
+        /* Ensure modal content is scrollable and centered */
+        .modal-scroll {
+            overflow-y: auto;
+            max-height: 90vh;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-6">
@@ -36,23 +41,25 @@
         </button>
     </div>
 
-    <div id="mangaResults" class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-6xl"></div>
+    <div id="mangaResults" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 w-full max-w-7xl"></div>
 
     <div id="mangaInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
-        <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full overflow-y-auto max-h-[90vh]">
-            <button id="closeModal" class="float-right text-red-400 hover:text-red-600">✕</button>
-            <div id="mangaInfoContent"></div>
+        <div class="bg-gray-900 rounded-lg p-6 max-w-3xl w-full modal-scroll">
+            <button id="closeModal" class="float-right text-red-400 hover:text-red-600 text-xl font-bold">✕</button>
+            <div id="mangaInfoContent" class="mt-8">
+                </div>
         </div>
     </div>
 
-    <div id="readerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center overflow-y-scroll p-4 z-50">
-        <button id="closeReader" class="text-red-400 hover:text-red-600 mb-4 text-xl font-bold">✕ Close Reader</button>
-        <div id="readerContent" class="flex flex-col items-center"></div>
+    <div id="readerModal" class="hidden fixed inset-0 bg-black bg-opacity-95 flex flex-col justify-start items-center overflow-y-scroll p-4 z-50">
+        <button id="closeReader" class="sticky top-0 bg-gray-800 bg-opacity-90 w-full text-red-400 hover:text-red-600 mb-4 py-3 text-xl font-bold z-10">✕ Close Reader</button>
+        <div id="readerContent" class="flex flex-col items-center max-w-full">
+            </div>
     </div>
 
     <script>
-        // *** FIX APPLIED HERE ***
-        const API_BASE = "https://kira-manga-plum.vercel.app/manga/mangapill"; // Corrected path to include the provider
+        // 1. Correct API_BASE to match your working endpoint
+        const API_BASE = "https://kira-manga-plum.vercel.app/manga/mangapill";
 
         const searchInput = document.getElementById("searchInput");
         const searchBtn = document.getElementById("searchBtn");
@@ -64,79 +71,98 @@
         const readerContent = document.getElementById("readerContent");
         const closeReader = document.getElementById("closeReader");
 
+        // Helper function for search and info fetching
+        const fetchData = async (url) => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Fetch failed:", error);
+                return null;
+            }
+        };
+
         // Search Manga
         searchBtn.addEventListener("click", async () => {
             const query = searchInput.value.trim();
             if (!query) return alert("Enter a manga name!");
 
             mangaResults.innerHTML = `<p class="text-center col-span-full">Searching...</p>`;
-            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/query
-            const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`);
-            const data = await res.json();
+            
+            const url = `${API_BASE}/${encodeURIComponent(query)}`;
+            const data = await fetchData(url);
 
             if (!data || data.length === 0) {
-                mangaResults.innerHTML = `<p class="text-center col-span-full text-gray-400">No results found.</p>`;
+                mangaResults.innerHTML = `<p class="text-center col-span-full text-gray-400">No results found for "${query}".</p>`;
                 return;
             }
 
             mangaResults.innerHTML = data.map(manga => `
-                <div class="manga-card bg-gray-800 p-3 rounded-lg cursor-pointer" onclick="showMangaInfo('${manga.id}')">
-                    <img src="${manga.image}" alt="${manga.title}" class="w-full h-60 object-cover rounded-lg mb-3" />
-                    <h3 class="text-center font-semibold">${manga.title}</h3>
+                <div class="manga-card bg-gray-800 p-3 rounded-lg cursor-pointer flex flex-col items-center" onclick="showMangaInfo('${manga.id}')">
+                    <img src="${manga.image}" alt="${manga.title}" class="w-full h-60 object-cover rounded-lg mb-3" onerror="this.src='https://via.placeholder.com/240x320?text=No+Image'" />
+                    <h3 class="text-center font-semibold text-sm mt-auto">${manga.title}</h3>
                 </div>
             `).join("");
         });
 
         // Show Manga Info
-        async function showMangaInfo(id) {
-            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/info?id=...
-            const res = await fetch(`${API_BASE}/info?id=${encodeURIComponent(id)}`);
-            const data = await res.json();
+        window.showMangaInfo = async function(id) {
+            mangaInfoContent.innerHTML = `<p class="text-center text-xl font-semibold mt-4">Loading Manga Details...</p>`;
+            mangaInfoModal.classList.remove("hidden");
+            
+            const url = `${API_BASE}/info?id=${encodeURIComponent(id)}`;
+            const data = await fetchData(url);
 
-            // NOTE: The chapter mapping below assumes your API returns an array of chapters 
-            // with 'id' and 'title' fields.
-            const chaptersHtml = data.chapters.map(ch => `
+            if (!data) {
+                 mangaInfoContent.innerHTML = `<p class="text-center text-red-400 text-xl font-semibold mt-4">Failed to load details.</p>`;
+                 return;
+            }
+
+            const chaptersHtml = data.chapters?.length ? data.chapters.map(ch => `
                 <button
-                    class="w-full text-left py-2 px-3 bg-sky-700 hover:bg-sky-600 rounded mb-2"
+                    class="w-full text-left py-2 px-3 bg-sky-700 hover:bg-sky-600 rounded mb-2 transition-colors duration-150 text-sm"
                     onclick="readChapter('${ch.id}')"
-                >${ch.title}</button>
-            `).join("");
+                >${ch.title || 'Chapter ' + ch.number || 'Unknown Chapter'}</button>
+            `).join("") : '<p class="text-gray-400">No chapters found.</p>';
 
             mangaInfoContent.innerHTML = `
-                <div class="flex flex-col md:flex-row gap-4">
-                    <img src="${data.image}" alt="${data.title}" class="w-48 h-72 object-cover rounded-lg" />
-                    <div>
-                        <h2 class="text-2xl font-bold mb-2">${data.title}</h2>
-                        <p class="text-gray-300 mb-4">${data.description || "No description available."}</p>
-                        <h3 class="text-lg font-semibold mb-2 text-sky-400">Chapters</h3>
-                        <div class="overflow-y-auto max-h-60">${chaptersHtml}</div>
+                <div class="flex flex-col md:flex-row gap-6">
+                    <img src="${data.image}" alt="${data.title}" class="w-full md:w-48 h-80 object-cover rounded-lg shadow-lg" onerror="this.src='https://via.placeholder.com/200x320?text=No+Image'" />
+                    <div class="flex-grow">
+                        <h2 class="text-3xl font-bold mb-2">${data.title}</h2>
+                        <p class="text-sky-400 mb-2">Status: ${data.status || 'Unknown'}</p>
+                        <p class="text-gray-300 mb-4 text-sm">${data.description || "No description available."}</p>
+                        
+                        <h3 class="text-lg font-semibold mb-2 text-sky-400">Genres:</h3>
+                        <p class="text-sm mb-4">${data.genres?.join(', ') || 'N/A'}</p>
+
+                        <h3 class="text-lg font-semibold mb-2 text-sky-400">Chapters:</h3>
+                        <div class="overflow-y-auto max-h-60 bg-gray-800 p-2 rounded-lg">${chaptersHtml}</div>
                     </div>
                 </div>
             `;
-
-            mangaInfoModal.classList.remove("hidden");
         }
 
         // Read Chapter
-        async function readChapter(chapterId) {
+        window.readChapter = async function(chapterId) {
             mangaInfoModal.classList.add("hidden");
             readerModal.classList.remove("hidden");
-            readerContent.innerHTML = `<p class="text-center text-gray-400">Loading pages...</p>`;
+            readerContent.innerHTML = `<p class="text-center text-gray-400 text-2xl font-bold mt-10">Loading pages...</p>`;
 
-            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/read?chapterId=...
-            const res = await fetch(`${API_BASE}/read?chapterId=${encodeURIComponent(chapterId)}`);
-            const data = await res.json();
+            const url = `${API_BASE}/read?chapterId=${encodeURIComponent(chapterId)}`;
+            const data = await fetchData(url);
 
-            // *** FIX APPLIED HERE: Consumet returns an array of objects, each with an 'img' field ***
-            // Your old code was likely wrong based on standard Consumet output.
-            if (!data.pages || data.pages.length === 0) {
-                readerContent.innerHTML = `<p class="text-center text-gray-400">No images found.</p>`;
+            if (!data || !data.pages || data.pages.length === 0) {
+                readerContent.innerHTML = `<p class="text-center text-red-400 text-2xl font-bold mt-10">No images found for this chapter. Try another source or check API.</p>`;
                 return;
             }
 
-            // It should be 'page.img' not 'src'
+            // 2. FIXED: Use page.img as required by Consumet's standard page structure
             readerContent.innerHTML = data.pages
-                .map(page => `<img src="${page.img}" class="mb-4 max-w-full rounded-lg shadow-lg" />`)
+                .map(page => `<img src="${page.img}" class="mb-2 max-w-full lg:max-w-4xl rounded-sm shadow-lg border border-gray-700" onerror="this.style.display='none'" />`)
                 .join("");
         }
 
