@@ -1,147 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kira Manga</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #0f172a;
-      color: #f1f5f9;
-    }
-    .manga-card:hover {
-      transform: scale(1.03);
-      transition: transform 0.2s ease-in-out;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kira Manga</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        .manga-card:hover {
+            transform: scale(1.03);
+            transition: transform 0.2s ease-in-out;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-6">
 
-  <h1 class="text-4xl font-bold mb-6 text-center text-sky-400">Kira Manga</h1>
+    <h1 class="text-4xl font-bold mb-6 text-center text-sky-400">Kira Manga</h1>
 
-  <div class="flex mb-8 w-full max-w-xl">
-    <input
-      id="searchInput"
-      type="text"
-      placeholder="Search manga..."
-      class="flex-grow p-3 rounded-l-lg text-black focus:outline-none"
-    />
-    <button
-      id="searchBtn"
-      class="bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-r-lg text-white font-semibold"
-    >
-      Search
-    </button>
-  </div>
-
-  <div id="mangaResults" class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-6xl"></div>
-
-  <!-- Manga Info Modal -->
-  <div id="mangaInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
-    <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full overflow-y-auto max-h-[90vh]">
-      <button id="closeModal" class="float-right text-red-400 hover:text-red-600">✕</button>
-      <div id="mangaInfoContent"></div>
-    </div>
-  </div>
-
-  <!-- Reader Modal -->
-  <div id="readerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center overflow-y-scroll p-4 z-50">
-    <button id="closeReader" class="text-red-400 hover:text-red-600 mb-4 text-xl font-bold">✕ Close Reader</button>
-    <div id="readerContent" class="flex flex-col items-center"></div>
-  </div>
-
-  <script>
-    const API_BASE = "https://kira-manga-plum.vercel.app/";
-
-    const searchInput = document.getElementById("searchInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const mangaResults = document.getElementById("mangaResults");
-    const mangaInfoModal = document.getElementById("mangaInfoModal");
-    const mangaInfoContent = document.getElementById("mangaInfoContent");
-    const closeModal = document.getElementById("closeModal");
-    const readerModal = document.getElementById("readerModal");
-    const readerContent = document.getElementById("readerContent");
-    const closeReader = document.getElementById("closeReader");
-
-    // Search Manga
-    searchBtn.addEventListener("click", async () => {
-      const query = searchInput.value.trim();
-      if (!query) return alert("Enter a manga name!");
-
-      mangaResults.innerHTML = `<p class="text-center col-span-full">Searching...</p>`;
-      const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`);
-      const data = await res.json();
-
-      if (!data || data.length === 0) {
-        mangaResults.innerHTML = `<p class="text-center col-span-full text-gray-400">No results found.</p>`;
-        return;
-      }
-
-      mangaResults.innerHTML = data.map(manga => `
-        <div class="manga-card bg-gray-800 p-3 rounded-lg cursor-pointer" onclick="showMangaInfo('${manga.id}')">
-          <img src="${manga.image}" alt="${manga.title}" class="w-full h-60 object-cover rounded-lg mb-3" />
-          <h3 class="text-center font-semibold">${manga.title}</h3>
-        </div>
-      `).join("");
-    });
-
-    // Show Manga Info
-    async function showMangaInfo(id) {
-      const res = await fetch(`${API_BASE}/info?id=${encodeURIComponent(id)}`);
-      const data = await res.json();
-
-      const chaptersHtml = data.chapters.map(ch => `
+    <div class="flex mb-8 w-full max-w-xl">
+        <input
+            id="searchInput"
+            type="text"
+            placeholder="Search manga..."
+            class="flex-grow p-3 rounded-l-lg text-black focus:outline-none"
+        />
         <button
-          class="w-full text-left py-2 px-3 bg-sky-700 hover:bg-sky-600 rounded mb-2"
-          onclick="readChapter('${ch.id}')"
-        >${ch.title}</button>
-      `).join("");
+            id="searchBtn"
+            class="bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-r-lg text-white font-semibold"
+        >
+            Search
+        </button>
+    </div>
 
-      mangaInfoContent.innerHTML = `
-        <div class="flex flex-col md:flex-row gap-4">
-          <img src="${data.image}" alt="${data.title}" class="w-48 h-72 object-cover rounded-lg" />
-          <div>
-            <h2 class="text-2xl font-bold mb-2">${data.title}</h2>
-            <p class="text-gray-300 mb-4">${data.description || "No description available."}</p>
-            <h3 class="text-lg font-semibold mb-2 text-sky-400">Chapters</h3>
-            <div class="overflow-y-auto max-h-60">${chaptersHtml}</div>
-          </div>
+    <div id="mangaResults" class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-6xl"></div>
+
+    <div id="mangaInfoModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
+        <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full overflow-y-auto max-h-[90vh]">
+            <button id="closeModal" class="float-right text-red-400 hover:text-red-600">✕</button>
+            <div id="mangaInfoContent"></div>
         </div>
-      `;
+    </div>
 
-      mangaInfoModal.classList.remove("hidden");
-    }
+    <div id="readerModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center overflow-y-scroll p-4 z-50">
+        <button id="closeReader" class="text-red-400 hover:text-red-600 mb-4 text-xl font-bold">✕ Close Reader</button>
+        <div id="readerContent" class="flex flex-col items-center"></div>
+    </div>
 
-    // Read Chapter
-    async function readChapter(chapterId) {
-      mangaInfoModal.classList.add("hidden");
-      readerModal.classList.remove("hidden");
-      readerContent.innerHTML = `<p class="text-center text-gray-400">Loading pages...</p>`;
+    <script>
+        // *** FIX APPLIED HERE ***
+        const API_BASE = "https://kira-manga-plum.vercel.app/manga/mangapill"; // Corrected path to include the provider
 
-      const res = await fetch(`${API_BASE}/read?chapterId=${encodeURIComponent(chapterId)}`);
-      const data = await res.json();
+        const searchInput = document.getElementById("searchInput");
+        const searchBtn = document.getElementById("searchBtn");
+        const mangaResults = document.getElementById("mangaResults");
+        const mangaInfoModal = document.getElementById("mangaInfoModal");
+        const mangaInfoContent = document.getElementById("mangaInfoContent");
+        const closeModal = document.getElementById("closeModal");
+        const readerModal = document.getElementById("readerModal");
+        const readerContent = document.getElementById("readerContent");
+        const closeReader = document.getElementById("closeReader");
 
-      if (!data.pages || data.pages.length === 0) {
-        readerContent.innerHTML = `<p class="text-center text-gray-400">No images found.</p>`;
-        return;
-      }
+        // Search Manga
+        searchBtn.addEventListener("click", async () => {
+            const query = searchInput.value.trim();
+            if (!query) return alert("Enter a manga name!");
 
-      readerContent.innerHTML = data.pages
-        .map(src => `<img src="${src}" class="mb-4 max-w-full rounded-lg shadow-lg" />`)
-        .join("");
-    }
+            mangaResults.innerHTML = `<p class="text-center col-span-full">Searching...</p>`;
+            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/query
+            const res = await fetch(`${API_BASE}/${encodeURIComponent(query)}`);
+            const data = await res.json();
 
-    closeModal.addEventListener("click", () => {
-      mangaInfoModal.classList.add("hidden");
-    });
+            if (!data || data.length === 0) {
+                mangaResults.innerHTML = `<p class="text-center col-span-full text-gray-400">No results found.</p>`;
+                return;
+            }
 
-    closeReader.addEventListener("click", () => {
-      readerModal.classList.add("hidden");
-      readerContent.innerHTML = "";
-    });
-  </script>
+            mangaResults.innerHTML = data.map(manga => `
+                <div class="manga-card bg-gray-800 p-3 rounded-lg cursor-pointer" onclick="showMangaInfo('${manga.id}')">
+                    <img src="${manga.image}" alt="${manga.title}" class="w-full h-60 object-cover rounded-lg mb-3" />
+                    <h3 class="text-center font-semibold">${manga.title}</h3>
+                </div>
+            `).join("");
+        });
+
+        // Show Manga Info
+        async function showMangaInfo(id) {
+            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/info?id=...
+            const res = await fetch(`${API_BASE}/info?id=${encodeURIComponent(id)}`);
+            const data = await res.json();
+
+            // NOTE: The chapter mapping below assumes your API returns an array of chapters 
+            // with 'id' and 'title' fields.
+            const chaptersHtml = data.chapters.map(ch => `
+                <button
+                    class="w-full text-left py-2 px-3 bg-sky-700 hover:bg-sky-600 rounded mb-2"
+                    onclick="readChapter('${ch.id}')"
+                >${ch.title}</button>
+            `).join("");
+
+            mangaInfoContent.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-4">
+                    <img src="${data.image}" alt="${data.title}" class="w-48 h-72 object-cover rounded-lg" />
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2">${data.title}</h2>
+                        <p class="text-gray-300 mb-4">${data.description || "No description available."}</p>
+                        <h3 class="text-lg font-semibold mb-2 text-sky-400">Chapters</h3>
+                        <div class="overflow-y-auto max-h-60">${chaptersHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            mangaInfoModal.classList.remove("hidden");
+        }
+
+        // Read Chapter
+        async function readChapter(chapterId) {
+            mangaInfoModal.classList.add("hidden");
+            readerModal.classList.remove("hidden");
+            readerContent.innerHTML = `<p class="text-center text-gray-400">Loading pages...</p>`;
+
+            // This now correctly points to https://kira-manga-plum.vercel.app/manga/mangapill/read?chapterId=...
+            const res = await fetch(`${API_BASE}/read?chapterId=${encodeURIComponent(chapterId)}`);
+            const data = await res.json();
+
+            // *** FIX APPLIED HERE: Consumet returns an array of objects, each with an 'img' field ***
+            // Your old code was likely wrong based on standard Consumet output.
+            if (!data.pages || data.pages.length === 0) {
+                readerContent.innerHTML = `<p class="text-center text-gray-400">No images found.</p>`;
+                return;
+            }
+
+            // It should be 'page.img' not 'src'
+            readerContent.innerHTML = data.pages
+                .map(page => `<img src="${page.img}" class="mb-4 max-w-full rounded-lg shadow-lg" />`)
+                .join("");
+        }
+
+        closeModal.addEventListener("click", () => {
+            mangaInfoModal.classList.add("hidden");
+        });
+
+        closeReader.addEventListener("click", () => {
+            readerModal.classList.add("hidden");
+            readerContent.innerHTML = "";
+        });
+    </script>
 
 </body>
 </html>
