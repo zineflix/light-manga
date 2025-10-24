@@ -1,202 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kira Manga</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #0f0f0f;
-      color: #fff;
-    }
-    .scrollbar-hide::-webkit-scrollbar {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kira Manga</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f0f;
+            color: #fff;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
-  <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold text-purple-400">Kira Manga</h1>
-    <div class="flex gap-2">
-      <input
-        id="searchInput"
-        type="text"
-        placeholder="Search manga..."
-        class="px-3 py-1 rounded bg-gray-800 text-white focus:outline-none"
-      />
-      <button
-        onclick="searchManga()"
-        class="bg-purple-600 px-4 py-1 rounded hover:bg-purple-700"
-      >
-        Search
-      </button>
+    <header class="bg-gray-900 p-4 flex items-center justify-between shadow-md">
+        <h1 class="text-xl font-bold text-purple-400">Kira Manga</h1>
+        <div class="flex gap-2">
+            <input
+                id="searchInput"
+                type="text"
+                placeholder="Search manga..."
+                class="px-3 py-1 rounded bg-gray-800 text-white focus:outline-none"
+                onkeydown="if(event.key === 'Enter') searchManga()" 
+            />
+            <button
+                onclick="searchManga()"
+                class="bg-purple-600 px-4 py-1 rounded hover:bg-purple-700"
+            >
+                Search
+            </button>
+        </div>
+    </header>
+
+    <main
+        id="content"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4"
+    ></main>
+
+    <div
+        id="reader"
+        class="fixed inset-0 bg-black bg-opacity-95 overflow-y-auto hidden z-50"
+    >
+        <div class="p-4 max-w-4xl mx-auto">
+            <button
+                onclick="closeReader()"
+                class="bg-gray-800 px-3 py-1 rounded mb-4 hover:bg-gray-700 sticky top-0 z-10"
+            >
+                ✕ Close
+            </button>
+            <div id="readerContent"></div>
+        </div>
     </div>
-  </header>
 
-  <main
-    id="content"
-    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4"
-  ></main>
+    <script>
+        // 1. API_BASE FIX: Set the base to the root of your API (NO trailing slash)
+        const API_BASE = "https://kira-manga-plum.vercel.app";
+        const PROVIDER = "mangapill";
 
-  <!-- Reader Modal -->
-  <div
-    id="reader"
-    class="fixed inset-0 bg-black bg-opacity-95 overflow-y-auto hidden z-50"
-  >
-    <div class="p-4 max-w-4xl mx-auto">
-      <button
-        onclick="closeReader()"
-        class="bg-gray-800 px-3 py-1 rounded mb-4 hover:bg-gray-700"
-      >
-        ✕ Close
-      </button>
-      <div id="readerContent"></div>
-    </div>
-  </div>
+        // Helper to convert spaces to underscores for URL path (e.g., "one piece" -> "one_piece")
+        const slugify = (text) => text.toLowerCase().replace(/\s+/g, '_');
 
-  <script>
-    // 👇 REPLACE THIS WITH YOUR OWN DEPLOYED API URL
-    const API_BASE = "https://kira-manga-plum.vercel.app/manga/mangapill/";
-    const SOURCES = ["mangapill"];
 
-    async function searchManga() {
-      const query = document.getElementById("searchInput").value.trim();
-      const content = document.getElementById("content");
-      content.innerHTML =
-        '<p class="col-span-full text-center text-gray-400">Searching...</p>';
+        async function searchManga() {
+            const query = document.getElementById("searchInput").value.trim();
+            const content = document.getElementById("content");
+            
+            if (!query) return;
 
-      if (!query) return;
+            content.innerHTML =
+                '<p class="col-span-full text-center text-gray-400">Searching...</p>';
 
-      let results = [];
-      let usedSource = null;
+            let results = [];
+            
+            try {
+                // 2. SEARCH URL FIX: Correct structure for Consumet search is: /manga/provider/query
+                // We use slugify to handle multi-word titles like "one piece"
+                const url = `${API_BASE}/manga/${PROVIDER}/${slugify(query)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // Consumet's manga search often returns an array directly, not data.results
+                results = data; 
+                
+            } catch (e) {
+                console.error(`Error fetching from ${PROVIDER}:`, e);
+            }
 
-      for (let source of SOURCES) {
-        try {
-          const res = await fetch(
-            `${API_BASE}/manga/${source}/${encodeURIComponent(query)}`
-          );
-          const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            results = data.results.map((r) => ({ ...r, _source: source }));
-            usedSource = source;
-            break;
-          }
-        } catch (e) {
-          console.log(`Error fetching from ${source}:`, e);
+            content.innerHTML = "";
+
+            if (!results || results.length === 0) {
+                content.innerHTML =
+                    '<p class="text-red-400 text-center col-span-full">No results found or API failed.</p>';
+                return;
+            }
+
+            results.forEach((manga) => {
+                const div = document.createElement("div");
+                div.className =
+                    "bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-200 cursor-pointer";
+                div.innerHTML = `
+                    <img src="${manga.image || 'https://via.placeholder.com/200x320?text=No+Image'}" class="w-full h-72 object-cover" onerror="this.src='https://via.placeholder.com/200x320?text=No+Image'" />
+                    <div class="p-2">
+                        <h2 class="text-sm font-semibold text-center line-clamp-2">${manga.title}</h2>
+                    </div>
+                `;
+                // Consumet returns manga.id and manga.providerId (which is 'mangapill')
+                div.onclick = () => viewManga(manga.id, manga.providerId);
+                content.appendChild(div);
+            });
         }
-      }
 
-      content.innerHTML = "";
+        async function viewManga(id, source) {
+            const content = document.getElementById("content");
+            content.innerHTML =
+                '<p class="col-span-full text-center text-gray-400">Loading manga info...</p>';
 
-      if (results.length === 0) {
-        content.innerHTML =
-          '<p class="text-red-400 text-center col-span-full">No results found.</p>';
-        return;
-      }
+            try {
+                // 3. INFO URL FIX: Correct structure is: /manga/provider/info?id=id
+                const url = `${API_BASE}/manga/${source}/info?id=${encodeURIComponent(id)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // Check if chapters are reversed and reverse them for display (newest first)
+                const chapters = data.chapters?.slice().reverse() || [];
 
-      results.forEach((manga) => {
-        const div = document.createElement("div");
-        div.className =
-          "bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer";
-        div.innerHTML = `
-          <img src="${manga.image}" class="w-full h-72 object-cover" />
-          <div class="p-2">
-            <h2 class="text-sm font-semibold text-center line-clamp-2">${manga.title}</h2>
-          </div>
-        `;
-        div.onclick = () => viewManga(manga.id, manga._source);
-        content.appendChild(div);
-      });
-    }
+                const chaptersHtml = chapters.length > 0
+                    ? chapters.map(
+                        (ch) => `
+                            <li>
+                                <a href="#" onclick="readChapter('${ch.id}', '${source}', '${data.title.replace(
+                                    /'/g,
+                                    "\\'"
+                                )}')" class="text-purple-400 hover:underline">${ch.title || 'Chapter ' + ch.number}</a>
+                            </li>
+                        `
+                      ).join("")
+                    : '<li class="text-red-400">No chapters available for this manga.</li>';
 
-    async function viewManga(id, source) {
-      const content = document.getElementById("content");
-      content.innerHTML =
-        '<p class="text-center text-gray-400">Loading manga info...</p>';
+                content.innerHTML = `
+                    <div class="col-span-full">
+                        <button
+                            onclick="searchManga()"
+                            class="mb-4 bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"
+                        >
+                            ← Back to search
+                        </button>
+                    </div>
+                    <div class="col-span-full flex flex-col md:flex-row gap-6">
+                        <img src="${data.image}" class="w-full md:w-64 rounded-lg shadow-lg h-96 object-cover" onerror="this.src='https://via.placeholder.com/256x384?text=No+Image'" />
+                        <div class="flex-1">
+                            <h1 class="text-3xl font-bold mb-2">${data.title}</h1>
+                            <p class="text-purple-400 mb-4">Status: ${data.status || 'N/A'}</p>
+                            <p class="text-gray-400 mb-4 text-sm">${data.description || "No description available."}</p>
+                            <h2 class="text-xl mb-2 text-purple-400">Chapters (Newest First)</h2>
+                            <ul class="space-y-1 max-h-[60vh] overflow-y-auto scrollbar-hide bg-gray-800 p-3 rounded-lg">
+                                ${chaptersHtml}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                content.innerHTML =
+                    '<p class="text-red-400 text-center col-span-full">Failed to load manga info.</p>';
+                console.error(e);
+            }
+        }
 
-      try {
-        const res = await fetch(`${API_BASE}/manga/${source}/info/${id}`);
-        const data = await res.json();
+        async function readChapter(chapterId, source, title) {
+            const reader = document.getElementById("reader");
+            const readerContent = document.getElementById("readerContent");
+            reader.classList.remove("hidden");
+            readerContent.innerHTML =
+                '<p class="text-center text-gray-400 mt-10">Loading chapter...</p>';
 
-        content.innerHTML = `
-          <button
-            onclick="searchManga()"
-            class="mb-4 bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"
-          >
-            ← Back
-          </button>
-          <div class="flex flex-col md:flex-row gap-6">
-            <img src="${data.image}" class="w-64 rounded-lg shadow-lg" />
-            <div>
-              <h1 class="text-3xl font-bold mb-2">${data.title}</h1>
-              <p class="text-gray-400 mb-4">${
-                data.description || "No description available."
-              }</p>
-              <h2 class="text-xl mb-2 text-purple-400">Chapters</h2>
-              <ul class="space-y-1 max-h-[60vh] overflow-y-auto scrollbar-hide">
-                ${
-                  data.chapters && data.chapters.length > 0
-                    ? data.chapters
-                        .slice()
-                        .reverse()
-                        .map(
-                          (ch) => `
-                    <li>
-                      <a href="#" onclick="readChapter('${ch.id}', '${source}', '${data.title.replace(
-                            /'/g,
-                            "\\'"
-                          )}')" class="text-purple-400 hover:underline">${ch.title}</a>
-                    </li>
-                  `
-                        )
-                        .join("")
-                    : '<li class="text-red-400">No chapters available for this manga.</li>'
+            try {
+                // 4. READ URL FIX: Correct structure is: /manga/provider/read?chapterId=id
+                const url = `${API_BASE}/manga/${source}/read?chapterId=${encodeURIComponent(chapterId)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // 5. DATA ACCESS FIX: Consumet read endpoint returns data.pages (an array of objects with 'img' key)
+                const pages = data.pages; 
+
+                if (!pages || pages.length === 0) {
+                    readerContent.innerHTML =
+                        '<p class="text-red-400 text-center mt-10">No pages found for this chapter.</p>';
+                    return;
                 }
-              </ul>
-            </div>
-          </div>
-        `;
-      } catch (e) {
-        content.innerHTML =
-          '<p class="text-red-400 text-center">Failed to load manga info.</p>';
-        console.error(e);
-      }
-    }
 
-    async function readChapter(chapterId, source, title) {
-      const reader = document.getElementById("reader");
-      const readerContent = document.getElementById("readerContent");
-      reader.classList.remove("hidden");
-      readerContent.innerHTML =
-        '<p class="text-center text-gray-400">Loading chapter...</p>';
+                readerContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6 text-center text-purple-400">${title}</h2>
+                    ${pages.map(
+                        (img) =>
+                            // Use img.img to access the URL
+                            `<img src="${img.img}" class="w-full max-w-4xl mx-auto rounded-lg mb-4 shadow-lg" loading="lazy" onerror="this.style.display='none'" />`
+                    ).join("")}
+                `;
+            } catch (e) {
+                readerContent.innerHTML =
+                    '<p class="text-red-400 text-center mt-10">Failed to load chapter pages. Check API logs.</p>';
+                console.error(e);
+            }
+        }
 
-      try {
-        const res = await fetch(
-          `${API_BASE}/manga/${source}/read/${chapterId}`
-        );
-        const data = await res.json();
-
-        readerContent.innerHTML = `
-          <h2 class="text-xl font-bold mb-4 text-center">${title}</h2>
-          ${data.images
-            .map(
-              (img) =>
-                `<img src="${img.img}" class="w-full rounded-lg mb-2" loading="lazy" />`
-            )
-            .join("")}
-        `;
-      } catch (e) {
-        readerContent.innerHTML =
-          '<p class="text-red-400 text-center">Failed to load chapter.</p>';
-        console.error(e);
-      }
-    }
-
-    function closeReader() {
-      document.getElementById("reader").classList.add("hidden");
-    }
-  </script>
+        function closeReader() {
+            document.getElementById("reader").classList.add("hidden");
+        }
+    </script>
 </body>
 </html>
