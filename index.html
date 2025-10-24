@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kira Manga</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="./dist/output.css" rel="stylesheet"> 
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -15,7 +17,6 @@
             transform: scale(1.03);
             transition: transform 0.2s ease-in-out;
         }
-        /* Ensure modal content is scrollable and centered */
         .modal-scroll {
             overflow-y: auto;
             max-height: 90vh;
@@ -58,7 +59,7 @@
     </div>
 
     <script>
-        // 1. Correct API_BASE to match your working endpoint
+        // 3. API FIX: Correct API_BASE to match your working endpoint
         const API_BASE = "https://kira-manga-plum.vercel.app/manga/mangapill";
 
         const searchInput = document.getElementById("searchInput");
@@ -71,16 +72,22 @@
         const readerContent = document.getElementById("readerContent");
         const closeReader = document.getElementById("closeReader");
 
-        // Helper function for search and info fetching
+        // Helper function for error handling
         const fetchData = async (url) => {
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // Check for 404 or other HTTP errors
+                    const errorDetails = await response.json().catch(() => ({}));
+                    throw new Error(`HTTP error! Status: ${response.status} - ${errorDetails.message || 'Server error'}`);
                 }
                 return await response.json();
             } catch (error) {
                 console.error("Fetch failed:", error);
+                // Display the error message on the results page if it's a search failure
+                if (url.includes('/manga/mangapill/')) {
+                     mangaResults.innerHTML = `<p class="text-center col-span-full text-red-400 mt-4">API Error: ${error.message}. Please check console/Vercel logs.</p>`;
+                }
                 return null;
             }
         };
@@ -88,7 +95,7 @@
         // Search Manga
         searchBtn.addEventListener("click", async () => {
             const query = searchInput.value.trim();
-            if (!query) return alert("Enter a manga name!");
+            if (!query) return;
 
             mangaResults.innerHTML = `<p class="text-center col-span-full">Searching...</p>`;
             
@@ -117,7 +124,7 @@
             const data = await fetchData(url);
 
             if (!data) {
-                 mangaInfoContent.innerHTML = `<p class="text-center text-red-400 text-xl font-semibold mt-4">Failed to load details.</p>`;
+                 mangaInfoContent.innerHTML = `<p class="text-center text-red-400 text-xl font-semibold mt-4">Failed to load details. Check the manga ID or API logs.</p>`;
                  return;
             }
 
@@ -160,7 +167,7 @@
                 return;
             }
 
-            // 2. FIXED: Use page.img as required by Consumet's standard page structure
+            // 4. DATA FIX: Use page.img as required by Consumet's standard page structure
             readerContent.innerHTML = data.pages
                 .map(page => `<img src="${page.img}" class="mb-2 max-w-full lg:max-w-4xl rounded-sm shadow-lg border border-gray-700" onerror="this.style.display='none'" />`)
                 .join("");
